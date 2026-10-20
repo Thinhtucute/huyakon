@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: huyakon-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: HF_TOKEN
+        sync: false
+      - key: ANALYZER_SPACE_URL
+        value: https://thinhtucute-huyakon-magiv3.hf.space
+      - key: TRANSLATOR_SPACE_URL
+        value: https://thinhtucute-huyakon-translation.hf.space
+      - key: CORS_ORIGINS
+        value: "*"

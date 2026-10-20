@@ -1,0 +1,30 @@
+# IntelliJ IDEA / Android Studio
+*.iml
+.idea/
+*.ipr
+*.iws
+
+# Gradle
+.gradle/
+build/
+**/build/
+
+# Local machine configuration
+local.properties
+
+# Logs
+*.log
+*.log.*
+
+# macOS
+.DS_Store
+
+# Android build outputs
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Environment variables / secrets
+.env
+.env.*
+!.env.example
