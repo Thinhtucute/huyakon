@@ -6,13 +6,17 @@ import com.example.huyakon.domain.port.ScreenCapturer
 import com.example.huyakon.domain.port.Translator
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import javax.inject.Inject
 
-class TranslateScreenUseCase(
-    private val capturer: ScreenCapturer,
+/**
+ * Hilt supplies the two long-lived dependencies. The capturer is NOT injected: it owns a
+ * MediaProjection that only exists after the user grants permission, so it is passed per call.
+ */
+class TranslateScreenUseCase @Inject constructor(
     private val analysis: AnalysisRepository,
     private val translator: Translator,
 ) {
-    operator fun invoke(): Flow<PipelineState> = flow {
+    operator fun invoke(capturer: ScreenCapturer): Flow<PipelineState> = flow {
         emit(PipelineState.Capturing)
         val capture = capturer.capture().getOrElse {
             emit(PipelineState.Error("Capture failed: ${it.message ?: it::class.simpleName}"))

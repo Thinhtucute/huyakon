@@ -41,12 +41,11 @@ class TranslateScreenUseCaseTest {
     @Test
     fun emitsEveryStageInOrder() = runTest {
         val useCase = TranslateScreenUseCase(
-            FakeCapturer(Result.success(capture)),
             FakeAnalysis(Result.success(analysis)),
             FakeTranslator(),
         )
 
-        val states = useCase().toList()
+        val states = useCase(FakeCapturer(Result.success(capture))).toList()
 
         assertEquals(
             listOf(
@@ -63,12 +62,11 @@ class TranslateScreenUseCaseTest {
     fun analysisFailureEmitsErrorAndSkipsTheTranslator() = runTest {
         val translator = FakeTranslator()
         val useCase = TranslateScreenUseCase(
-            FakeCapturer(Result.success(capture)),
             FakeAnalysis(Result.failure(IllegalStateException("space down"))),
             translator,
         )
 
-        val states = useCase().toList()
+        val states = useCase(FakeCapturer(Result.success(capture))).toList()
 
         assertEquals(
             listOf(
@@ -84,12 +82,11 @@ class TranslateScreenUseCaseTest {
     @Test
     fun captureFailureStopsImmediately() = runTest {
         val useCase = TranslateScreenUseCase(
-            FakeCapturer(Result.failure(IllegalStateException("no frame"))),
             FakeAnalysis(Result.success(analysis)),
             FakeTranslator(),
         )
 
-        val states = useCase().toList()
+        val states = useCase(FakeCapturer(Result.failure(IllegalStateException("no frame")))).toList()
 
         assertEquals(
             listOf(PipelineState.Capturing, PipelineState.Error("Capture failed: no frame")),

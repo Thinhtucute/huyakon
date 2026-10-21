@@ -2,6 +2,16 @@ package com.example.huyakon.data.remote.dto
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+
+// No default values here: kotlinx.serialization omits properties equal to their default
+// (encodeDefaults = false), which would silently drop "lang" / "proximity_speakers" from the request.
+@Serializable
+data class AnalyzeRequestDto(
+    @SerialName("image_base64") val imageBase64: String,
+    val lang: String,
+    @SerialName("proximity_speakers") val proximitySpeakers: Boolean,
+)
+
 @Serializable
 data class AnalysisDto(
     val image: ImageDto = ImageDto(),

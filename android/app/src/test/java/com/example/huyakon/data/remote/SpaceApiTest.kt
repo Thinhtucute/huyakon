@@ -1,6 +1,9 @@
 package com.example.huyakon.data.remote
 
+import com.example.huyakon.data.remote.dto.AnalyzeRequestDto
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -10,7 +13,9 @@ import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import java.io.IOException
+import retrofit2.HttpException
+import retrofit2.Retrofit
+import retrofit2.converter.kotlinx.serialization.asConverterFactory
 
 class SpaceApiTest {
     private lateinit var server: MockWebServer
@@ -25,7 +30,15 @@ class SpaceApiTest {
     @Before
     fun setUp() {
         server = MockWebServer().also { it.start() }
-        api = SpaceApi(OkHttpClient(), server.url("/").toString())
+        api = Retrofit.Builder()
+            .baseUrl(server.url("/"))
+            .client(OkHttpClient())
+            .addConverterFactory(
+                Json { ignoreUnknownKeys = true }
+                    .asConverterFactory("application/json".toMediaType())
+            )
+            .build()
+            .create(SpaceApi::class.java)
     }
 
     @After
@@ -35,7 +48,9 @@ class SpaceApiTest {
     fun postsTheImageToTheBackend() {
         server.enqueue(MockResponse().setBody(resultJson))
 
-        val dto = runBlocking { api.analyze("QkFTRTY0") }
+        val dto = runBlocking {
+            api.analyze(AnalyzeRequestDto("QkFTRTY0", "ja", proximitySpeakers = true))
+        }
 
         assertEquals(100, dto.image.width)
         assertEquals("こんにちは", dto.script.single().text)
@@ -49,7 +64,9 @@ class SpaceApiTest {
     fun acceptsTheBackendObjectPayload() {
         server.enqueue(MockResponse().setBody(resultJson))
 
-        val dto = runBlocking { api.analyze("QkFTRTY0") }
+        val dto = runBlocking {
+            api.analyze(AnalyzeRequestDto("QkFTRTY0", "ja", proximitySpeakers = true))
+        }
 
         assertEquals(200, dto.image.height)
         assertEquals("こんにちは", dto.script.single().text)
@@ -59,13 +76,21 @@ class SpaceApiTest {
     fun aBackendErrorBecomesAnIOException() {
         server.enqueue(MockResponse().setResponseCode(502).setBody("Space unavailable"))
 
-        assertThrows(IOException::class.java) { runBlocking { api.analyze("QQ==") } }
+        assertThrows(HttpException::class.java) {
+            runBlocking {
+                api.analyze(AnalyzeRequestDto("QQ==", "ja", proximitySpeakers = true))
+            }
+        }
     }
 
     @Test
     fun anHttpErrorBecomesAnIOException() {
         server.enqueue(MockResponse().setResponseCode(500).setBody("boom"))
 
-        assertThrows(IOException::class.java) { runBlocking { api.analyze("QQ==") } }
+        assertThrows(HttpException::class.java) {
+            runBlocking {
+                api.analyze(AnalyzeRequestDto("QQ==", "ja", proximitySpeakers = true))
+            }
+        }
     }
 }

@@ -15,6 +15,12 @@ data class TranslationRequestLineDto(
 )
 
 @Serializable
+data class TranslationRequestDto(
+    val script: List<TranslationRequestLineDto>,
+    val glossary: String,
+)
+
+@Serializable
 data class TranslationResponseDto(
     val flat: List<TranslatedEntryDto> = emptyList(),
     val error: SpaceErrorDto? = null,

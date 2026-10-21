@@ -1,6 +1,10 @@
 package com.example.huyakon.data.remote
 
+import com.example.huyakon.data.remote.dto.TranslationRequestDto
+import com.example.huyakon.data.remote.dto.TranslationRequestLineDto
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -9,6 +13,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import retrofit2.Retrofit
+import retrofit2.converter.kotlinx.serialization.asConverterFactory
 
 class TranslationApiTest {
     private lateinit var server: MockWebServer
@@ -17,7 +23,15 @@ class TranslationApiTest {
     @Before
     fun setUp() {
         server = MockWebServer().also { it.start() }
-        api = TranslationApi(OkHttpClient(), server.url("/").toString())
+        api = Retrofit.Builder()
+            .baseUrl(server.url("/"))
+            .client(OkHttpClient())
+            .addConverterFactory(
+                Json { ignoreUnknownKeys = true }
+                    .asConverterFactory("application/json".toMediaType())
+            )
+            .build()
+            .create(TranslationApi::class.java)
     }
 
     @After
@@ -33,14 +47,17 @@ class TranslationApiTest {
 
         val response = runBlocking {
             api.translate(
-                lines = listOf(
-                    com.example.huyakon.data.remote.dto.TranslationRequestLineDto(
-                        order = 0,
-                        textId = 3,
-                        text = "こんにちは",
-                        role = "dialogue",
-                        maybeSfx = false,
-                    )
+                TranslationRequestDto(
+                    script = listOf(
+                        TranslationRequestLineDto(
+                            order = 0,
+                            textId = 3,
+                            text = "こんにちは",
+                            role = "dialogue",
+                            maybeSfx = false,
+                        )
+                    ),
+                    glossary = "",
                 )
             )
         }

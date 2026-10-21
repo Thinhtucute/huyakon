@@ -16,8 +16,9 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.example.huyakon.R
-import com.example.huyakon.di.AppGraph
 import com.example.huyakon.domain.PipelineState
+import com.example.huyakon.domain.PipelineStateHolder
+import com.example.huyakon.domain.port.ScreenCapturer
 import com.example.huyakon.domain.usecase.TranslateScreenUseCase
 import com.example.huyakon.platform.capture.ScreenCaptureController
 import com.example.huyakon.platform.overlay.OverlayFabController
@@ -29,16 +30,20 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 /** Wiring only: owns the lifecycle of the FAB and the capture session and forwards pipeline state. */
+@AndroidEntryPoint
 class OverlayService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private val pipeline = AppGraph.pipelineState
+    // Injected by Hilt inside super.onCreate(); never touch these before that call.
+    @Inject lateinit var pipeline: PipelineStateHolder
+    @Inject lateinit var translateScreen: TranslateScreenUseCase
 
     private lateinit var fab: OverlayFabController
     private lateinit var translationOverlay: TranslationOverlayController
     private var capture: ScreenCaptureController? = null
-    private var translateScreen: TranslateScreenUseCase? = null
     private var runJob: Job? = null
 
     override fun onCreate() {
@@ -67,7 +72,6 @@ class OverlayService : Service() {
             val controller = ScreenCaptureController(this, projection, onProjectionStopped = ::stopSelf)
             controller.start()
             capture = controller
-            translateScreen = AppGraph.translateScreen(controller)
         }
         return START_NOT_STICKY
     }
@@ -79,7 +83,7 @@ class OverlayService : Service() {
             fab.setStatus("訳")
             return
         }
-        val run = translateScreen ?: return
+        val capturer: ScreenCapturer = capture ?: return
         if (runJob?.isActive == true) return
         runJob = scope.launch {
             fab.setStatus("準備中")
@@ -88,7 +92,7 @@ class OverlayService : Service() {
             var showingTranslation = false
             try {
                 delay(SETTLE_MS) // lets the hidden FAB leave the screen so it is not in the frame
-                run().collect { state ->
+                translateScreen(capturer).collect { state ->
                     // Bring the FAB back as soon as the frame is taken; the network wait is long.
                     if (state !is PipelineState.Capturing) fab.setVisible(true)
                     fab.setStatus(state.fabStatus())
